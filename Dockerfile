@@ -1,33 +1,35 @@
-### ---- Stage 1: Build frontend if it exists ----
+### ---- Stage 1: Builder ----
 FROM node:18 AS builder
 WORKDIR /repo
 
-# Copy entire repo so Docker never fails on missing paths
+# Copy everything from repository
 COPY . .
 
-# Build client only if it exists
+# Always create dist folder so Render won’t error
+RUN mkdir -p /repo/client/dist
+
+# If client exists, build it
 RUN if [ -d "client" ] && [ -f "client/package.json" ]; then \
+      echo "Building client..."; \
       cd client && npm install && npm run build; \
     else \
-      echo "No client folder found — skipping frontend build"; \
+      echo "No client folder found — using empty dist"; \
     fi
 
-### ---- Stage 2: Runtime server ----
+
+### ---- Stage 2: Runtime ----
 FROM node:18-alpine AS runtime
 WORKDIR /app
 
-# Copy server files if they exist
+# Copy server package files
 COPY package.json package-lock.json* ./
+RUN npm install --production || npm install --production
 
-RUN if [ -f package.json ]; then npm install --production; fi
+# Copy server
+COPY server.js .
 
-# Copy server script if it exists
-COPY server.js server.js
-
-# Copy built frontend only if it was produced
+# Copy frontend (folder always exists now)
 COPY --from=builder /repo/client/dist ./client/dist
 
 EXPOSE 3000
 CMD ["node", "server.js"]
-
-

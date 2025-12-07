@@ -1,20 +1,18 @@
-
-// server.js - Static server for BraFit (no storage)
+// server.js - static server with graceful fallback
 const express = require('express');
-const helmet = require('helmet');
-const morgan = require('morgan');
 const path = require('path');
+const fs = require('fs');
 const app = express();
-app.use(helmet());
-app.use(morgan('tiny'));
 
 const dist = path.join(__dirname, 'client', 'dist');
-if (require('fs').existsSync(dist)) {
+if (fs.existsSync(dist)) {
   app.use(express.static(dist));
   app.get('*', (req, res) => res.sendFile(path.join(dist, 'index.html')));
 } else {
-  app.get('/', (req, res) => res.send('Build the client (npm run build) and place dist in client/dist.'));
+  app.get('/', (req, res) => {
+    res.send(`<html><head><title>BraFit</title></head><body><h1>BraFit</h1><p>No frontend build found. If you want the UI, add a <code>client/</code> folder and run the build in the Dockerfile.</p></body></html>`);
+  });
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('BraFit static server listening on', PORT));
+app.listen(PORT, ()=>console.log('listening on', PORT));
